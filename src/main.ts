@@ -552,7 +552,20 @@ export default class LanguageToolPlugin extends Plugin {
             console.debug(`Checking ${annotations.length()} characters...`);
             // console.debug("Text", JSON.stringify(annotations, undefined, "  "));
 
-            matches = await api.check(settings, offset, annotations);
+            const MAX_CHUNK_SIZE = settings.maxChunkSize;
+            const chunks = annotations.length() > MAX_CHUNK_SIZE ? annotations.split(MAX_CHUNK_SIZE) : [annotations];
+
+            if (chunks.length > 1) {
+                new Notice(`Checking text in ${chunks.length} chunks...`);
+            }
+
+            matches = [];
+            let currentOffset = offset;
+            for (const chunk of chunks) {
+                const chunkMatches = await api.check(settings, currentOffset, chunk);
+                matches.push(...chunkMatches);
+                currentOffset += chunk.length();
+            }
             // update range to the checked text
             if (range) range = { from: offset, to: offset + annotations.length() };
         } catch (e) {

@@ -126,6 +126,7 @@ export interface LTOptions {
     enabledRules?: string;
     disabledRules?: string;
 
+    maxChunkSize: number;
     longCheckNotification: boolean;
     injectProperties: boolean;
 }
@@ -139,6 +140,7 @@ export const DEFAULT_SETTINGS: LTOptions = {
     syncDictionary: false,
     remoteDictionary: [],
     pickyMode: false,
+    maxChunkSize: 20000,
     longCheckNotification: true,
     injectProperties: true,
 };
@@ -622,6 +624,19 @@ export class LTSettingsTab extends PluginSettingTab {
                 component.setValue(settings.options.longCheckNotification).onChange(async value => {
                     await settings.update({ longCheckNotification: value });
                 });
+            });
+
+        new Setting(containerEl)
+            .setName("Max chunk size")
+            .setDesc("The maximum number of characters to send in a single LanguageTool request.")
+            .addText(text => {
+                text.setValue(settings.options.maxChunkSize.toString())
+                    .onChange(async value => {
+                        const num = parseInt(value.replace(/\D/g, ""), 10);
+                        if (!isNaN(num)) {
+                            await settings.update({ maxChunkSize: num });
+                        }
+                    });
             });
 
         new Setting(containerEl)

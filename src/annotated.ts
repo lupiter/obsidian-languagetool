@@ -101,12 +101,38 @@ export class AnnotatedText {
         return null;
     }
 
-    length(): number {
-        return this.annotations.reduce((acc, a) => {
-            if ("text" in a) return acc + a.text.length;
-            if ("markup" in a) return acc + a.markup.length;
-            return acc;
-        }, 0);
+    /**
+     * Split the annotated text into chunks of at most `maxSize` characters.
+     */
+    split(maxSize: number): AnnotatedText[] {
+        const chunks: AnnotatedText[] = [];
+        let currentChunk = new AnnotatedText();
+        let currentLength = 0;
+
+        for (const a of this.annotations) {
+            const len = "text" in a ? a.text.length : a.markup.length;
+
+            // If adding this annotation would exceed maxSize, start a new chunk.
+            // We only start a new chunk if the current chunk is not empty.
+            if (currentLength + len > maxSize && currentLength > 0) {
+                chunks.push(currentChunk);
+                currentChunk = new AnnotatedText();
+                currentLength = 0;
+            }
+
+            if ("text" in a) {
+                currentChunk.pushText(a.text);
+            } else {
+                currentChunk.pushMarkup(a.markup, a.interpretAs);
+            }
+            currentLength += len;
+        }
+
+        if (currentChunk.annotations.length > 0) {
+            chunks.push(currentChunk);
+        }
+
+        return chunks;
     }
 
     stringify(): string {
