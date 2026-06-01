@@ -23,6 +23,14 @@ export class AnnotatedText {
         }
     }
 
+    /** Return the total length of the annotated text, including markup and interpretAs */
+    length(): number {
+        return this.annotations.reduce((acc, a) =>
+            acc + ("text" in a ? a.text.length : (a.markup.length + (a.interpretAs?.length || 0))),
+            0,
+        );
+    }
+
     /** Merge compatible annotations to reduce the length, returning the start offset */
     optimize(): number {
         const output: Annotation[] = [];
@@ -103,33 +111,80 @@ export class AnnotatedText {
 
     /**
      * Split the annotated text into chunks of at most `maxSize` characters.
+     * If possible, splits at paragraph boundaries (\n\n).
      */
     split(maxSize: number): AnnotatedText[] {
         const chunks: AnnotatedText[] = [];
-        let currentChunk = new AnnotatedText();
-        let currentLength = 0;
+        if (this.annotations.length === 0) return chunks;
 
+        // 1. Pre-process: split any single annotation that is > maxSize
+        const exploded: Annotation[] = [];
         for (const a of this.annotations) {
-            const len = "text" in a ? a.text.length : a.markup.length;
-
-            // If adding this annotation would exceed maxSize, start a new chunk.
-            // We only start a new chunk if the current chunk is not empty.
-            if (currentLength + len > maxSize && currentLength > 0) {
-                chunks.push(currentChunk);
-                currentChunk = new AnnotatedText();
-                currentLength = 0;
-            }
-
-            if ("text" in a) {
-                currentChunk.pushText(a.text);
+            const len = "text" in a ? a.text.length : (a.markup.length + (a.interpretAs?.length || 0));
+            if (len > maxSize) {
+                if ("text" in a) {
+                    const text = a.text;
+                    let textOffset = 0;
+                    while (textOffset < text.length) {
+                        const part = text.slice(textOffset, textOffset + maxSize);
+                        exploded.push({ text: part });
+                        textOffset += maxSize;
+                    }
+                } else {
+                    // For markup, we can't easily split it without knowing its structure.
+                    // We'll keep it as one annotation.
+                    exploded.push(a);
+                }
             } else {
-                currentChunk.pushMarkup(a.markup, a.interpretAs);
+                exploded.push(a);
             }
-            currentLength += len;
         }
 
-        if (currentChunk.annotations.length > 0) {
-            chunks.push(currentChunk);
+        // 2. Chunking
+        let i = 0;
+        while (i < exploded.length) {
+            let chunkEnd = i;
+            let currentLength = 0;
+            let lastBoundaryInChunk = -1;
+
+            for (let j = i; j < exploded.length; j++) {
+                const a = exploded[j];
+                const len = "text" in a ? a.text.length : (a.markup.length + (a.interpretAs?.length || 0));
+
+                if (currentLength + len > maxSize) {
+                    break;
+                }
+                currentLength += len;
+                chunkEnd = j;
+                // A boundary is an annotation that represents a paragraph break (\n\n)
+                if ("markup" in a && a.interpretAs === "\n\n") {
+                    lastBoundaryInChunk = j;
+                }
+            }
+
+            // 3. Paragraph boundary optimization
+            // If we are not at the end of the exploded list, and we've ended in the middle of a paragraph
+            // (i.e., the last annotation in the chunk is not a boundary),
+            // and we have seen a boundary earlier in this chunk, move the end back to that boundary.
+            if (
+                chunkEnd < exploded.length - 1 &&
+                lastBoundaryInChunk !== -1 &&
+                !("markup" in exploded[chunkEnd] && exploded[chunkEnd].interpretAs === "\n\n")
+            ) {
+                chunkEnd = lastBoundaryInChunk;
+            }
+
+            const newChunk = new AnnotatedText();
+            for (let k = i; k <= chunkEnd; k++) {
+                const a = exploded[k];
+                if ("text" in a) {
+                    newChunk.pushText(a.text);
+                } else {
+                    newChunk.pushMarkup(a.markup, a.interpretAs);
+                }
+            }
+            chunks.push(newChunk);
+            i = chunkEnd + 1;
         }
 
         return chunks;

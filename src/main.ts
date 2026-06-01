@@ -552,8 +552,7 @@ export default class LanguageToolPlugin extends Plugin {
             console.debug(`Checking ${annotations.length()} characters...`);
             // console.debug("Text", JSON.stringify(annotations, undefined, "  "));
 
-            const MAX_CHUNK_SIZE = settings.maxChunkSize;
-            const chunks = annotations.length() > MAX_CHUNK_SIZE ? annotations.split(MAX_CHUNK_SIZE) : [annotations];
+            const chunks = annotations.length() > settings.maxChunkSize ? annotations.split(settings.maxChunkSize) : [annotations];
 
             if (chunks.length > 1) {
                 new Notice(`Checking text in ${chunks.length} chunks...`);
