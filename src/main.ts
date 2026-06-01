@@ -550,7 +550,6 @@ export default class LanguageToolPlugin extends Plugin {
                 longNotice = new Notice("Checking spelling...", 30000);
 
             console.debug(`Checking ${annotations.length()} characters...`);
-            // console.debug("Text", JSON.stringify(annotations, undefined, "  "));
 
             const chunks = annotations.length() > settings.maxChunkSize ? annotations.split(settings.maxChunkSize) : [annotations];
 

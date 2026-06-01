@@ -32,10 +32,6 @@ describe("AnnotatedText chunking", () => {
     // Chunk 2 should be P2 (8 chars).
     // Chunk 3 should be P3 (6 chars).
     const chunks = at.split(10);
-    console.log(
-      "Chunk lengths:",
-      chunks.map(c => c.length()),
-    );
     expect(chunks.length).toBe(3);
     expect(chunks[0].length()).toBe(8);
     expect(chunks[1].length()).toBe(8);
@@ -54,10 +50,6 @@ describe("AnnotatedText chunking", () => {
     // Chunk 2: "paragraph" (9).
     // Chunk 3: "\n\n" (2).
     const chunks = at.split(10);
-    console.log(
-      "Chunk lengths:",
-      chunks.map(c => c.length()),
-    );
     expect(chunks.length).toBe(3);
     expect(chunks[0].length()).toBe(10);
     expect(chunks[1].length()).toBe(9);
