@@ -23,14 +23,6 @@ export class AnnotatedText {
         }
     }
 
-    /** Return the total length of the annotated text, including markup and interpretAs */
-    length(): number {
-        return this.annotations.reduce((acc, a) =>
-            acc + ("text" in a ? a.text.length : (a.markup.length + (a.interpretAs?.length || 0))),
-            0,
-        );
-    }
-
     /** Merge compatible annotations to reduce the length, returning the start offset */
     optimize(): number {
         const output: Annotation[] = [];
@@ -107,6 +99,13 @@ export class AnnotatedText {
             if (text.length >= to) return text.slice(from, to).trim();
         }
         return null;
+    }
+
+    length(): number {
+        return this.annotations.reduce((acc, a) => {
+            if ("text" in a) return acc + a.text.length;
+            return acc + a.markup.length + (a.interpretAs?.length || 0);
+        }, 0);
     }
 
     /**
